@@ -38,3 +38,6 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+##/node_modules.##
+/frontend/node_modules/
