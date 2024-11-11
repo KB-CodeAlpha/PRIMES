@@ -1,4 +1,16 @@
 services:
+
+  db:
+    image: 'postgres:13.1-alpine'
+    container_name: db-primes
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - 5342:5342
+    volumes:
+      - D:/PROVA:/PROVA
+
   primes:
     build:
       context: .
@@ -8,22 +20,21 @@ services:
       - db
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/postgres
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_FLYWAY_ENABLED="true"
 
-  db:
-    image: 'postgres:13.1-alpine'
-    container_name: db-primes
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+  primes-frontend:
+    container_name: primes-frontend
+    build:
+      context: ./frontend/primesfront/
+      dockerfile: Dockerfile
     ports:
-      - 5342:5342
+      - 3000:3000
 
   nginx:
-    image: 'nginx@sha256:e9293c9bedb0db866e7d2b69e58131db4c2478e6cd216cdd99b134830703983a'
+    image: 'nginx:stable-bookworm'
     container_name: nginx_cn1
     restart: unless-stopped
     ports:
@@ -32,13 +43,12 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:var/www/certbot
 
-  frontend:
-    image: primes-frontend
-    pull_policy: never
-    container_name: primes-frontend
-    build:
-        context: .
-        dockerfile: ops/frontDockfile/Dockerfile
-    ports:
-      - 80:80
+  certbot:
+      image: certbot/certbot@sha256:19b21da253eba85f182540e222759ec66926dd765a2a1fe4d08af033a6f7c116
+      container_name: certbot
+      volumes:
+        - ./certbot/conf:etc/letsencrypt
+        - ./certbot/www:var/www/certbot
+      command: certonly --webroot -w /var/www/certbot --force-renewal --email {email} -d localhost --agree-tos
